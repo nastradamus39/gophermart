@@ -7,10 +7,10 @@ package gophermart
 // адрес системы расчёта начислений: переменная окружения ОС ACCRUAL_SYSTEM_ADDRESS или флаг -r.
 
 // Cfg конфиг приложения
-var Cfg config
+var Cfg Config
 
 // Config конфиг приложения
-type config struct {
+type Config struct {
 	ServerAddress  string `env:"RUN_ADDRESS" envDefault:"localhost:8080"`
 	DatabaseDsn    string `env:"DATABASE_URI" envDefault:""`
 	AccrualAddress string `env:"ACCRUAL_SYSTEM_ADDRESS" envDefault:""`

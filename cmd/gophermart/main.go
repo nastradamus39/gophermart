@@ -40,6 +40,12 @@ func main() {
 	flag.StringVar(&gophermart.Cfg.AccrualAddress, "r", gophermart.Cfg.AccrualAddress, "Адрес системы расчёта начислений")
 	flag.Parse()
 
+	err = gophermart.InitDB()
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+
 	// запускаем сервер
 	err = http.ListenAndServe("127.0.0.1:8081", r)
 	if err != nil {
