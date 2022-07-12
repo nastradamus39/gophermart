@@ -1,13 +1,16 @@
 package main
 
 import (
+	"flag"
 	"log"
 	"net/http"
 	"os"
 
+	"github.com/nastradamus39/gophermart/gophermart"
 	"github.com/nastradamus39/gophermart/internal/handlers/orders"
 	"github.com/nastradamus39/gophermart/internal/handlers/users"
 
+	"github.com/caarlos0/env/v6"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 )
@@ -25,7 +28,17 @@ func main() {
 
 	log.SetOutput(flog)
 
-	log.Printf("Starting server on %s", "127.0.0.1:8081")
+	// Переменные окружения в конфиг
+	err = env.Parse(&gophermart.Cfg)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Параметры командной строки в конфиг
+	flag.StringVar(&gophermart.Cfg.ServerAddress, "a", gophermart.Cfg.ServerAddress, "Адрес и порт запуска сервиса")
+	flag.StringVar(&gophermart.Cfg.DatabaseDsn, "d", gophermart.Cfg.DatabaseDsn, "Адрес подключения к базе данных")
+	flag.StringVar(&gophermart.Cfg.AccrualAddress, "r", gophermart.Cfg.AccrualAddress, "Адрес системы расчёта начислений")
+	flag.Parse()
 
 	// запускаем сервер
 	err = http.ListenAndServe("127.0.0.1:8081", r)
