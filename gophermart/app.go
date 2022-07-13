@@ -1,5 +1,10 @@
 package gophermart
 
+import (
+	"github.com/gorilla/sessions"
+	"github.com/jmoiron/sqlx"
+)
+
 // Конфигурирование сервиса накопительной системы лояльности
 // Сервис должен поддерживать конфигурирование следующими методами:
 // адрес и порт запуска сервиса: переменная окружения ОС RUN_ADDRESS или флаг -a;
@@ -8,6 +13,12 @@ package gophermart
 
 // Cfg конфиг приложения
 var Cfg Config
+
+// DB подключение к базе
+var DB *sqlx.DB
+
+// SessionStore хранилище сессий
+var SessionStore = sessions.NewCookieStore([]byte("aaa"))
 
 // Config конфиг приложения
 type Config struct {
