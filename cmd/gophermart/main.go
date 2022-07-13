@@ -7,8 +7,9 @@ import (
 	"os"
 
 	"github.com/nastradamus39/gophermart/gophermart"
-	"github.com/nastradamus39/gophermart/internal/handlers/orders"
-	"github.com/nastradamus39/gophermart/internal/handlers/users"
+	"github.com/nastradamus39/gophermart/internal/db"
+	"github.com/nastradamus39/gophermart/internal/handlers"
+	"github.com/nastradamus39/gophermart/internal/middlewares"
 
 	"github.com/caarlos0/env/v6"
 	"github.com/go-chi/chi/v5"
@@ -32,6 +33,7 @@ func main() {
 	err = env.Parse(&gophermart.Cfg)
 	if err != nil {
 		log.Fatal(err)
+		return
 	}
 
 	// Параметры командной строки в конфиг
@@ -40,8 +42,14 @@ func main() {
 	flag.StringVar(&gophermart.Cfg.AccrualAddress, "r", gophermart.Cfg.AccrualAddress, "Адрес системы расчёта начислений")
 	flag.Parse()
 
+	err = db.InitDB()
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+
 	// запускаем сервер
-	err = http.ListenAndServe("127.0.0.1:8081", r)
+	err = http.ListenAndServe(gophermart.Cfg.ServerAddress, r)
 	if err != nil {
 		log.Printf("Не удалось запустить сервер. %s", err)
 		return
@@ -57,15 +65,25 @@ func Router() (r *chi.Mux) {
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Compress(5))
 
-	r.Post("/api/user/register", users.RegisterHandler)
-	r.Post("/api/user/login", users.LoginHandler)
+	r.Post("/api/user/register", handlers.RegisterHandler)
+	r.Post("/api/user/login", handlers.LoginHandler)
 
-	r.Post("/api/user/orders", orders.AddOrderHandler)
-	r.Get("/api/user/orders", orders.GetOrdersHandler)
+	// закрытые авторизацией эндпоинты
+	r.Mount("/api/user", privateRouter())
 
-	r.Get("/api/user/balance", users.BalanceHandler)
-	r.Post("/api/user/balance/withdraw", users.WithdrawHandler)
-	r.Get("/api/user/balance/withdrawals", users.WithdrawalsHandler)
+	return r
+}
+
+// privateRouter Роутер для закрытых авторизацией эндпоинтов
+func privateRouter() http.Handler {
+	r := chi.NewRouter()
+	r.Use(middlewares.UserAuth) // проверка авторизации
+
+	r.Post("/orders", handlers.AddOrderHandler)
+	r.Get("/orders", handlers.GetOrdersHandler)
+	r.Get("/balance", handlers.BalanceHandler)
+	r.Post("/balance/withdraw", handlers.WithdrawHandler)
+	r.Get("/balance/withdrawals", handlers.WithdrawalsHandler)
 
 	return r
 }
