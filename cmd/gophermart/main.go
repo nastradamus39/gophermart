@@ -27,7 +27,7 @@ func main() {
 	}
 	defer flog.Close()
 
-	log.SetOutput(flog)
+	//log.SetOutput(flog)
 
 	// Переменные окружения в конфиг
 	err = env.Parse(&gophermart.Cfg)
