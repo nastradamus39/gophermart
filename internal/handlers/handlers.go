@@ -113,12 +113,12 @@ func BalanceHandler(w http.ResponseWriter, r *http.Request) {
 		UnauthorizedResponse(w, r)
 	}
 
-	type balance struct {
+	type data struct {
 		Current   int `json:"current"`
 		Withdrawn int `json:"withdrawn"`
 	}
 
-	b := balance{
+	b := data{
 		Current:   user.Accrual,
 		Withdrawn: user.Withdrawn,
 	}
@@ -137,15 +137,90 @@ func BalanceHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // WithdrawHandler — запрос на списание баллов с накопительного счёта в счёт оплаты нового заказа.
+// 200 — успешная обработка запроса;
+// 401 — пользователь не авторизован;
+// 402 — на счету недостаточно средств;
+// 422 — неверный номер заказа;
+// 500 — внутренняя ошибка сервера.
 func WithdrawHandler(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusCreated)
-	w.Write([]byte("запрос на списание баллов с накопительного счёта в счёт оплаты нового заказа"))
+	u := r.Context().Value("user")
+	user, ok := u.(*db.User)
+
+	if !ok {
+		UnauthorizedResponse(w, r)
+	}
+
+	body, _ := ioutil.ReadAll(r.Body)
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
+			log.Printf("AddOrderHandler. %s", err)
+		}
+	}(r.Body)
+
+	type data struct {
+		Order string `json:"order"`
+		Sum   int    `json:"sum"`
+	}
+
+	b := data{}
+	err := json.Unmarshal(body, &b)
+	if err != nil {
+		InternalErrorResponse(w, r, err)
+		return
+	}
+
+	// запрос на списание денег больше чем есть
+	if b.Sum > user.Accrual {
+		w.WriteHeader(http.StatusPaymentRequired)
+		w.Write([]byte("на счету недостаточно средств"))
+	} else {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("ok"))
+	}
+
+	return
 }
 
 // WithdrawalsHandler — получение информации о выводе средств с накопительного счёта пользователем.
+// Возможные коды ответа:
+// 200 — успешная обработка запроса.
+// 204 — нет ни одного списания.
+// 401 — пользователь не авторизован.
+// 500 — внутренняя ошибка сервера.
 func WithdrawalsHandler(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusCreated)
-	w.Write([]byte("получение информации о выводе средств с накопительного счёта пользователем"))
+	u := r.Context().Value("user")
+	user, ok := u.(*db.User)
+
+	if !ok {
+		UnauthorizedResponse(w, r)
+		return
+	}
+
+	withdrawals, err := db.Repositories().Orders.FindWithdrawalsByUser(user.Id)
+
+	if err != nil {
+		InternalErrorResponse(w, r, err)
+		return
+	}
+
+	if len(withdrawals) == 0 {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+
+	response, err := json.Marshal(withdrawals)
+
+	if err != nil {
+		InternalErrorResponse(w, r, err)
+		return
+	}
+
+	w.Header().Add("Content-Type", "application/json")
+	w.Header().Add("Accept", "application/json")
+
+	w.WriteHeader(http.StatusOK)
+	w.Write(response)
 }
 
 // AddOrderHandler - загрузка пользователем номера заказа для расчёта.

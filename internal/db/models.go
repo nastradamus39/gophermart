@@ -1,21 +1,6 @@
 package db
 
-type Model interface {
-	// Table название таблицы
-	isModel() bool
-}
-
-type User struct {
-	Persist   bool   `db:"-" json:"-"`
-	Id        int    `db:"id"`
-	Login     string `db:"login" json:"login"`
-	Password  string `db:"password" json:"password"`
-	Accrual   int    `db:"accrual"`
-	Withdrawn int    `db:"withdrawn"`
-	Balance   int    `db:"balance"`
-}
-
-func (u *User) isModel() bool { return true }
+import "time"
 
 // NEW — заказ загружен в систему, но не попал в обработку;
 // PROCESSING — вознаграждение за заказ рассчитывается;
@@ -28,6 +13,16 @@ const (
 	ORDER_STATUS_PROCESSED  = "PROCESSED"
 )
 
+type User struct {
+	Persist   bool   `db:"-" json:"-"`
+	Id        int    `db:"id"`
+	Login     string `db:"login" json:"login"`
+	Password  string `db:"password" json:"password"`
+	Accrual   int    `db:"accrual"`
+	Withdrawn int    `db:"withdrawn"`
+	Balance   int    `db:"balance"`
+}
+
 type Order struct {
 	Persist    bool   `db:"-" json:"-"`
 	OrderId    int    `db:"orderId" json:"number"`
@@ -38,4 +33,8 @@ type Order struct {
 	UploadedAt string `db:"uploadedAt" json:"uploaded_at"`
 }
 
-func (o *Order) isModel() bool { return true }
+type Withdrawals struct {
+	Order       int       `db:"orderId" json:"order"`
+	Sum         int       `db:"withdraw" json:"sum"`
+	ProcessedAt time.Time `db:"uploadedAt" json:"processed_at"`
+}
