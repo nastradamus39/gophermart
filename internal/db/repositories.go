@@ -98,6 +98,16 @@ func (r *OrderRepository) Find(orderId int) (order *Order, err error) {
 
 // FindByUser поиск заказов по пользователю
 func (r *OrderRepository) FindByUser(userId int) (orders []*Order, err error) {
-	err = r.db.Select(&orders, `SELECT * FROM orders WHERE "userId" = $1`, userId)
+	err = r.db.Select(&orders, `SELECT * FROM orders WHERE "userId" = $1 ORDER BY "uploadedAt"`, userId)
+	return
+}
+
+// FindWithdrawalsByUser списания балов пользователя
+func (r *OrderRepository) FindWithdrawalsByUser(userId int) (orders []*Withdrawals, err error) {
+	err = r.db.Select(
+		&orders,
+		`SELECT "orderId", withdraw, "uploadedAt" FROM orders WHERE "userId" = $1 ORDER BY "uploadedAt"`,
+		userId,
+	)
 	return
 }
