@@ -28,11 +28,12 @@ create unique index if not exists users_login_uindex
 
 create table if not exists orders
 (
-    "orderId" int not null,
-    "status"  varchar(10) not null,
-    "userId"  int not null,
-    accural   int default 0,
-    withdraw  int default 0
+    "orderId"  int not null,
+    "status"   varchar(10) not null,
+    "userId"   int not null,
+    accural    int default 0,
+    withdraw   int default 0,
+    uploadedAt timestamp default now()
 );
 
 create unique index if not exists orders_orderid_uindex

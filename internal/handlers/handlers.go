@@ -15,7 +15,8 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-// RegisterHandler — регистрация пользователя. Регистрация производится по паре логин/пароль. Каждый логин должен быть уникальным.
+// RegisterHandler — регистрация пользователя. Регистрация производится по паре логин/пароль.
+// Каждый логин должен быть уникальным.
 // После успешной регистрации должна происходить автоматическая аутентификация пользователя.
 // Возможные ответы
 // 200 — пользователь успешно зарегистрирован и аутентифицирован;
@@ -99,10 +100,40 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("authenticated"))
 }
 
-// BalanceHandler — получение текущего баланса лояльности пользователя.
+// BalanceHandler — Хендлер доступен только авторизованному пользователю. В ответе содержатся данные о текущей сумме
+// баллов лояльности, а также сумме использованных за весь период регистрации баллов.
+// 200 — успешная обработка запроса.
+// 401 — пользователь не авторизован.
+// 500 — внутренняя ошибка сервера.
 func BalanceHandler(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusCreated)
-	w.Write([]byte("получение текущего баланса лояльности пользователя"))
+	u := r.Context().Value("user")
+	user, ok := u.(*db.User)
+
+	if !ok {
+		UnauthorizedResponse(w, r)
+	}
+
+	type balance struct {
+		Current   int `json:"current"`
+		Withdrawn int `json:"withdrawn"`
+	}
+
+	b := balance{
+		Current:   user.Accrual,
+		Withdrawn: user.Withdrawn,
+	}
+
+	response, err := json.Marshal(b)
+
+	if err != nil {
+		InternalErrorResponse(w, r, err)
+		return
+	}
+
+	w.Header().Add("Content-Type", "application/json")
+	w.Header().Add("Accept", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write(response)
 }
 
 // WithdrawHandler — запрос на списание баллов с накопительного счёта в счёт оплаты нового заказа.
@@ -118,8 +149,8 @@ func WithdrawalsHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // AddOrderHandler - загрузка пользователем номера заказа для расчёта.
-// Хендлер доступен только аутентифицированным пользователям. Номером заказа является последовательность цифр произвольной длины.
-// Номер заказа может быть проверен на корректность ввода с помощью алгоритма Луна.
+// Хендлер доступен только аутентифицированным пользователям. Номером заказа является последовательность цифр
+// произвольной длины. Номер заказа может быть проверен на корректность ввода с помощью алгоритма Луна.
 // Возможные коды ответа:
 // 200 — номер заказа уже был загружен этим пользователем;
 // 202 — новый номер заказа принят в обработку;
@@ -182,7 +213,8 @@ func AddOrderHandler(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
-// GetOrdersHandler — получение списка загруженных пользователем номеров заказов, статусов их обработки и информации о начислениях
+// GetOrdersHandler — получение списка загруженных пользователем номеров заказов, статусов их обработки
+// и информации о начислениях
 // Возможные коды ответа:
 // 200 — успешная обработка запроса.
 // 204 — нет данных для ответа.
@@ -194,18 +226,21 @@ func GetOrdersHandler(w http.ResponseWriter, r *http.Request) {
 
 	if !ok {
 		UnauthorizedResponse(w, r)
+		return
 	}
 
 	orders, err := db.Repositories().Orders.FindByUser(user.Id)
 
 	if err != nil {
 		InternalErrorResponse(w, r, err)
+		return
 	}
 
 	response, err := json.Marshal(orders)
 
 	if err != nil {
 		InternalErrorResponse(w, r, err)
+		return
 	}
 
 	w.Header().Add("Content-Type", "application/json")
