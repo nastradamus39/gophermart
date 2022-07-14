@@ -11,7 +11,7 @@ import (
 // InternalErrorResponse - возвращает пользователю 500 ошибку
 func InternalErrorResponse(w http.ResponseWriter, r *http.Request, err error) {
 	log.Printf("Internal server error. %s", err)
-	http.Error(w, "Internal server error", http.StatusInternalServerError)
+	http.Error(w, "внутренняя ошибка сервера", http.StatusInternalServerError)
 	return
 }
 
@@ -22,7 +22,7 @@ func UnauthorizedResponse(w http.ResponseWriter, r *http.Request) {
 }
 
 // AuthenticateUser создает сессию пользователя
-func AuthenticateUser(user db.User, r *http.Request, w http.ResponseWriter) error {
+func AuthenticateUser(user *db.User, r *http.Request, w http.ResponseWriter) error {
 	// авторизуем пользователя
 	session, err := gophermart.SessionStore.Get(r, "go-session")
 	if err != nil {

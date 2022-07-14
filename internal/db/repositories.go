@@ -58,8 +58,10 @@ func (r *UsersRepository) Delete(user interface{}) error {
 }
 
 // Find поиск пользователя по логину
-func (r *UsersRepository) Find(login string) (user User, err error) {
-	err = r.db.Get(&user, "SELECT * FROM users WHERE login = $1", login)
+func (r *UsersRepository) Find(login string) (user *User, err error) {
+	user = &User{}
+	err = r.db.Get(user, "SELECT * FROM users WHERE login = $1", login)
+	user.Persist = true
 	return
 }
 
@@ -72,7 +74,8 @@ func (r *OrderRepository) Save(order interface{}) error {
 
 	if !o.Persist {
 		res, err := r.db.NamedQuery(`INSERT INTO orders("orderId", "userId", "status", "accrual", "withdraw") 
-			VALUES (:orderId, :userId, :status, :accrual, :withdraw) on conflict ("orderId") DO NOTHING RETURNING "orderId"`, &o)
+			VALUES (:orderId, :userId, :status, :accrual, :withdraw) on conflict ("orderId") DO NOTHING 
+			RETURNING "orderId", "userId", "status", "accrual", "withdraw"`, &o)
 
 		if err != nil {
 			return err
@@ -84,4 +87,17 @@ func (r *OrderRepository) Save(order interface{}) error {
 	}
 
 	return nil
+}
+
+// Find поиск заказа по orderId
+func (r *OrderRepository) Find(orderId int) (order *Order, err error) {
+	err = r.db.Get(&order, `SELECT * FROM orders WHERE "orderId" = $1`, orderId)
+	order.Persist = true
+	return
+}
+
+// FindByUser поиск заказов по пользователю
+func (r *OrderRepository) FindByUser(userId int) (orders []*Order, err error) {
+	err = r.db.Select(&orders, `SELECT * FROM orders WHERE "userId" = $1`, userId)
+	return
 }
