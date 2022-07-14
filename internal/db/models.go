@@ -29,12 +29,12 @@ const (
 )
 
 type Order struct {
-	Persist   bool   `db:"-"`
-	OrderId   int    `db:"orderId"`
-	Status    string `db:"status"`
-	UserId    int    `db:"userId"`
-	Accrual   int    `db:"accrual"`
-	Withdrawn int    `db:"withdraw"`
+	Persist   bool   `db:"-" json:"-"`
+	OrderId   int    `db:"orderId" json:"number"`
+	Status    string `db:"status" json:"status"`
+	UserId    int    `db:"userId" json:"-"`
+	Accrual   int    `db:"accrual" json:"accrual,omitempty"`
+	Withdrawn int    `db:"withdraw" json:"-"`
 }
 
 func (o *Order) isModel() bool { return true }

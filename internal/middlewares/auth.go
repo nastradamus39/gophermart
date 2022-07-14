@@ -30,6 +30,6 @@ func UserAuth(next http.Handler) http.Handler {
 		}
 
 		// в контекст передаем ссылку на пользователя
-		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), "user", &user)))
+		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), "user", user)))
 	})
 }

@@ -3,7 +3,6 @@ package handlers
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
@@ -52,7 +51,7 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Аунтефицируем пользователя
-	err = AuthenticateUser(user, r, w)
+	err = AuthenticateUser(&user, r, w)
 	if err != nil {
 		InternalErrorResponse(w, r, err)
 	}
@@ -139,15 +138,13 @@ func AddOrderHandler(w http.ResponseWriter, r *http.Request) {
 	}(r.Body)
 
 	orderId, _ := strconv.Atoi(string(id))
-	u := r.Context().Value("user")
 
+	u := r.Context().Value("user")
 	user, ok := u.(*db.User)
 
 	if !ok {
 		UnauthorizedResponse(w, r)
 	}
-
-	fmt.Println(user)
 
 	order := db.Order{
 		Persist:   false,
@@ -161,17 +158,64 @@ func AddOrderHandler(w http.ResponseWriter, r *http.Request) {
 	err := db.Repositories().Orders.Save(&order)
 
 	if errors.Is(err, gophermart.ErrOrderIdConflict) {
-		http.Error(w, gophermart.ErrOrderIdConflict.Error(), http.StatusConflict)
+		// дополнительно нужно проверить кем был ранее загружен заказ
+		o, err := db.Repositories().Orders.Find(orderId)
+		if err != nil {
+			InternalErrorResponse(w, r, err)
+		}
+
+		if o.UserId != user.Id {
+			http.Error(w, "номер заказа уже был загружен другим пользователем", http.StatusConflict)
+		} else {
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte("номер заказа уже был загружен этим пользователем"))
+		}
 		return
 	}
 
-	w.WriteHeader(http.StatusCreated)
-	w.Write([]byte("заказ загружен"))
+	if err != nil {
+		InternalErrorResponse(w, r, err)
+	}
+
+	w.WriteHeader(http.StatusAccepted)
+	w.Write([]byte("новый номер заказа принят в обработку"))
+	return
 }
 
 // GetOrdersHandler — получение списка загруженных пользователем номеров заказов, статусов их обработки и информации о начислениях
+// Возможные коды ответа:
+// 200 — успешная обработка запроса.
+// 204 — нет данных для ответа.
+// 401 — пользователь не авторизован.
+// 500 — внутренняя ошибка сервера.
 func GetOrdersHandler(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusCreated)
-	w.Write([]byte("получение списка загруженных пользователем номеров заказов,\n" +
-		"// статусов их обработки и информации о начислениях"))
+	u := r.Context().Value("user")
+	user, ok := u.(*db.User)
+
+	if !ok {
+		UnauthorizedResponse(w, r)
+	}
+
+	orders, err := db.Repositories().Orders.FindByUser(user.Id)
+
+	if err != nil {
+		InternalErrorResponse(w, r, err)
+	}
+
+	response, err := json.Marshal(orders)
+
+	if err != nil {
+		InternalErrorResponse(w, r, err)
+	}
+
+	w.Header().Add("Content-Type", "application/json")
+	w.Header().Add("Accept", "application/json")
+
+	if len(orders) > 0 {
+		w.WriteHeader(http.StatusOK)
+	} else {
+		w.WriteHeader(http.StatusNoContent)
+	}
+
+	w.Write(response)
 }
