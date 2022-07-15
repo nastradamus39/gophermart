@@ -3,7 +3,6 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
 	"time"
@@ -44,12 +43,7 @@ func Accrual(order *db.Order, user *db.User) {
 	fmt.Printf(url, gophermart.Cfg.AccrualAddress, order.OrderID)
 
 	resp, err := http.Get(url)
-	defer func(Body io.ReadCloser) {
-		err := Body.Close()
-		if err != nil {
-			fmt.Print(err.Error())
-		}
-	}(resp.Body)
+	defer resp.Body.Close()
 
 	if err != nil {
 		log.Print(err.Error())
