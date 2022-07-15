@@ -10,43 +10,40 @@ import (
 )
 
 var schema = `
-create table if not exists users 
-(
-    login     varchar(256) not null,
-    password  varchar(256) not null,
-    accrual   int default 0,
-    withdrawn int default 0,
-    balance   int default 0
-);
+CREATE TABLE IF NOT EXISTS "orders" (
+    "orderId" character varying(64) NOT NULL,
+    "userId" integer NOT NULL,
+    "accrual" double precision DEFAULT '0',
+    "status" character varying(10) NOT NULL,
+    "uploadedAt" timestamp DEFAULT now(),
+    CONSTRAINT "orders_orderid_uindex" UNIQUE ("orderId"),
+    CONSTRAINT "orders_pk" PRIMARY KEY ("orderId")
+) WITH (oids = false);
 
-create unique index if not exists users_login_uindex
-    on users (login);
+CREATE SEQUENCE IF NOT EXISTS user_id_seq INCREMENT 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1;
 
---alter table users
---    add constraint users_pk
---        primary key (login);
+CREATE TABLE IF NOT EXISTS users (
+    "login" character varying(256) NOT NULL,
+    "password" character varying(256) NOT NULL,
+    "balance" double precision DEFAULT '0',
+    "id" integer DEFAULT nextval('user_id_seq') NOT NULL,
+    CONSTRAINT "users_id_uindex" UNIQUE ("id"),
+    CONSTRAINT "users_login_uindex" UNIQUE ("login"),
+    CONSTRAINT "users_pk" PRIMARY KEY ("id")
+) WITH (oids = false);
 
-create table if not exists orders
-(
-    "orderId"  int not null,
-    "status"   varchar(10) not null,
-    "userId"   int not null,
-    accural    int default 0,
-    withdraw   int default 0,
-    uploadedAt timestamp default now()
-);
-
-create unique index if not exists orders_orderid_uindex
-    on orders ("orderId");
-
---alter table orders
---    add constraint orders_pk
---        primary key ("orderId");
+CREATE TABLE IF NOT EXISTS withdrawals (
+    "orderId" character varying(64),
+    "withdraw" double precision,
+    "date" timestamp DEFAULT now(),
+    "userId" integer NOT NULL
+) WITH (oids = false);
 `
 
 type repositories struct {
-	Users  *UsersRepository
-	Orders *OrderRepository
+	Users    *UsersRepository
+	Orders   *OrderRepository
+	Withdraw *WithdrawRepository
 }
 
 var repos *repositories
@@ -70,6 +67,10 @@ func InitDB() (err error) {
 		}},
 		Orders: &OrderRepository{repo{
 			table: "orders",
+			db:    gophermart.DB,
+		}},
+		Withdraw: &WithdrawRepository{repo{
+			table: "withdrawals",
 			db:    gophermart.DB,
 		}},
 	}

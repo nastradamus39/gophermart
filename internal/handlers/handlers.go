@@ -3,16 +3,14 @@ package handlers
 import (
 	"encoding/json"
 	"errors"
+	"github.com/nastradamus39/gophermart/gophermart"
+	"github.com/nastradamus39/gophermart/internal/db"
+	"github.com/nastradamus39/gophermart/internal/luhn"
+	"golang.org/x/crypto/bcrypt"
 	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
-	"strconv"
-
-	"github.com/nastradamus39/gophermart/gophermart"
-	"github.com/nastradamus39/gophermart/internal/db"
-
-	"golang.org/x/crypto/bcrypt"
 )
 
 // RegisterHandler — регистрация пользователя. Регистрация производится по паре логин/пароль.
@@ -114,13 +112,20 @@ func BalanceHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	type data struct {
-		Current   int `json:"current"`
-		Withdrawn int `json:"withdrawn"`
+		Current   float32 `json:"current"`
+		Withdrawn float32 `json:"withdrawn"`
+	}
+
+	// сумма всех списанных балов пользователя
+	withDrawSum, err := db.Repositories().Withdraw.WithdrawalsSumByUser(user.ID)
+	if err != nil {
+		InternalErrorResponse(w, r, err)
+		return
 	}
 
 	b := data{
-		Current:   user.Accrual,
-		Withdrawn: user.Withdrawn,
+		Current:   user.Balance,
+		Withdrawn: withDrawSum,
 	}
 
 	response, err := json.Marshal(b)
@@ -159,8 +164,8 @@ func WithdrawHandler(w http.ResponseWriter, r *http.Request) {
 	}(r.Body)
 
 	type data struct {
-		Order string `json:"order"`
-		Sum   int    `json:"sum"`
+		Order string  `json:"order"`
+		Sum   float32 `json:"sum"`
 	}
 
 	b := data{}
@@ -171,15 +176,32 @@ func WithdrawHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// запрос на списание денег больше чем есть
-	if b.Sum > user.Accrual {
+	if b.Sum > user.Balance {
 		w.WriteHeader(http.StatusPaymentRequired)
 		w.Write([]byte("на счету недостаточно средств"))
 	} else {
+		// регистрируем списание в базе
+		err := db.Repositories().Withdraw.Save(&db.Withdraw{
+			Order:  b.Order,
+			Sum:    b.Sum,
+			UserID: user.ID,
+		})
+		if err != nil {
+			InternalErrorResponse(w, r, err)
+			return
+		}
+
+		// списываем с баланса пользователя
+		user.Balance = user.Balance - b.Sum
+		err = db.Repositories().Users.Save(user)
+		if err != nil {
+			InternalErrorResponse(w, r, err)
+			return
+		}
+
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("ok"))
 	}
-
-	return
 }
 
 // WithdrawalsHandler — получение информации о выводе средств с накопительного счёта пользователем.
@@ -197,7 +219,7 @@ func WithdrawalsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	withdrawals, err := db.Repositories().Orders.FindWithdrawalsByUser(user.Id)
+	withdrawals, err := db.Repositories().Withdraw.FindWithdrawalsByUser(user.ID)
 
 	if err != nil {
 		InternalErrorResponse(w, r, err)
@@ -243,7 +265,13 @@ func AddOrderHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}(r.Body)
 
-	orderId, _ := strconv.Atoi(string(id))
+	orderId := string(id)
+
+	if isValid := luhn.Validate(orderId); !isValid {
+		w.WriteHeader(http.StatusUnprocessableEntity)
+		w.Write([]byte("неверный формат номера заказа"))
+		return
+	}
 
 	u := r.Context().Value("user")
 	user, ok := u.(*db.User)
@@ -253,24 +281,23 @@ func AddOrderHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	order := db.Order{
-		Persist:   false,
-		OrderId:   orderId,
-		Status:    db.ORDER_STATUS_NEW,
-		UserId:    user.Id,
-		Accrual:   0,
-		Withdrawn: 0,
+		Persist: false,
+		OrderID: orderId,
+		Status:  db.OrderStatusNew,
+		UserId:  user.ID,
+		Accrual: 0,
 	}
 
 	err := db.Repositories().Orders.Save(&order)
 
-	if errors.Is(err, gophermart.ErrOrderIdConflict) {
+	if errors.Is(err, gophermart.ErrOrderIDConflict) {
 		// дополнительно нужно проверить кем был ранее загружен заказ
 		o, err := db.Repositories().Orders.Find(orderId)
 		if err != nil {
 			InternalErrorResponse(w, r, err)
 		}
 
-		if o.UserId != user.Id {
+		if o.UserId != user.ID {
 			http.Error(w, "номер заказа уже был загружен другим пользователем", http.StatusConflict)
 		} else {
 			w.WriteHeader(http.StatusOK)
@@ -282,6 +309,9 @@ func AddOrderHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		InternalErrorResponse(w, r, err)
 	}
+
+	// отправляем в обработку
+	go Accrual(&order, user)
 
 	w.WriteHeader(http.StatusAccepted)
 	w.Write([]byte("новый номер заказа принят в обработку"))
@@ -304,7 +334,7 @@ func GetOrdersHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	orders, err := db.Repositories().Orders.FindByUser(user.Id)
+	orders, err := db.Repositories().Orders.FindByUser(user.ID)
 
 	if err != nil {
 		InternalErrorResponse(w, r, err)
@@ -328,4 +358,5 @@ func GetOrdersHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Write(response)
+	return
 }
