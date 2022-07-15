@@ -272,6 +272,7 @@ func AddOrderHandler(w http.ResponseWriter, r *http.Request) {
 	if isValid := luhn.Validate(orderId); !isValid {
 		w.WriteHeader(http.StatusUnprocessableEntity)
 		w.Write([]byte("неверный формат номера заказа"))
+		return
 	}
 
 	u := r.Context().Value("user")
