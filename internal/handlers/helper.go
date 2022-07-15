@@ -43,7 +43,7 @@ func Accrual(order *db.Order, user *db.User) {
 	url := "%s/api/orders/%s"
 	fmt.Printf(url, gophermart.Cfg.AccrualAddress, order.OrderID)
 
-	resp, err := http.Get(url)
+	resp, e := http.Get(url)
 	defer func(Body io.ReadCloser) {
 		err := Body.Close()
 		if err != nil {
@@ -51,8 +51,8 @@ func Accrual(order *db.Order, user *db.User) {
 		}
 	}(resp.Body)
 
-	if err != nil {
-		log.Print(err.Error())
+	if e != nil {
+		log.Print(e.Error())
 		return
 	}
 
@@ -80,7 +80,7 @@ func Accrual(order *db.Order, user *db.User) {
 		// меняем статус заказа
 		order.Status = incomingData.Status
 		order.Accrual = incomingData.Accrual
-		err = db.Repositories().Orders.Save(order)
+		err := db.Repositories().Orders.Save(order)
 		if err != nil {
 			log.Print(err.Error())
 		}
