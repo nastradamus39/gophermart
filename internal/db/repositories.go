@@ -95,7 +95,7 @@ func (r *OrderRepository) Save(order interface{}) error {
 		o.Persist = true
 
 		if !res.Next() {
-			return fmt.Errorf("%w", gophermart.ErrOrderIdConflict)
+			return fmt.Errorf("%w", gophermart.ErrOrderIDConflict)
 		}
 	} else {
 		_, err := r.db.NamedQuery(`UPDATE orders SET "status" = :status, "accrual" = :accrual 
@@ -111,31 +111,31 @@ func (r *OrderRepository) Save(order interface{}) error {
 }
 
 // Find поиск заказа по orderId
-func (r *OrderRepository) Find(orderId string) (order *Order, err error) {
+func (r *OrderRepository) Find(orderID string) (order *Order, err error) {
 	order = &Order{}
-	err = r.db.Get(order, `SELECT * FROM orders WHERE "orderId" = $1`, orderId)
+	err = r.db.Get(order, `SELECT * FROM orders WHERE "orderId" = $1`, orderID)
 	order.Persist = true
 	return
 }
 
 // FindByUser поиск заказов по пользователю
-func (r *OrderRepository) FindByUser(userId int) (orders []*Order, err error) {
-	err = r.db.Select(&orders, `SELECT * FROM orders WHERE "userId" = $1 ORDER BY "uploadedAt"`, userId)
+func (r *OrderRepository) FindByUser(userID int) (orders []*Order, err error) {
+	err = r.db.Select(&orders, `SELECT * FROM orders WHERE "userId" = $1 ORDER BY "uploadedAt"`, userID)
 	return
 }
 
 // FindWithdrawalsByUser списания балов пользователя
-func (r *WithdrawRepository) FindWithdrawalsByUser(userId int) (withdrawals []*Withdraw, err error) {
+func (r *WithdrawRepository) FindWithdrawalsByUser(userID int) (withdrawals []*Withdraw, err error) {
 	err = r.db.Select(
 		&withdrawals,
 		`SELECT "orderId", withdraw, "date" FROM withdrawals WHERE "userId" = $1 ORDER BY "date"`,
-		userId,
+		userID,
 	)
 	return
 }
 
 // WithdrawalsSumByUser сумма всех списаний пользователя
-func (r *WithdrawRepository) WithdrawalsSumByUser(userId int) (sum float32, err error) {
+func (r *WithdrawRepository) WithdrawalsSumByUser(userID int) (sum float32, err error) {
 	sum = 0
 	err = r.db.Get(
 		&sum,
@@ -146,7 +146,7 @@ func (r *WithdrawRepository) WithdrawalsSumByUser(userId int) (sum float32, err 
 						   END
 				FROM withdrawals
 				WHERE "userId" = $1`,
-		userId,
+		userID,
 	)
 	return
 }

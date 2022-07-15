@@ -117,7 +117,7 @@ func BalanceHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// сумма всех списанных балов пользователя
-	withDrawSum, err := db.Repositories().Withdraw.WithdrawalsSumByUser(user.Id)
+	withDrawSum, err := db.Repositories().Withdraw.WithdrawalsSumByUser(user.ID)
 	if err != nil {
 		InternalErrorResponse(w, r, err)
 		return
@@ -184,7 +184,7 @@ func WithdrawHandler(w http.ResponseWriter, r *http.Request) {
 		err := db.Repositories().Withdraw.Save(&db.Withdraw{
 			Order:  b.Order,
 			Sum:    b.Sum,
-			UserId: user.Id,
+			UserID: user.ID,
 		})
 		if err != nil {
 			InternalErrorResponse(w, r, err)
@@ -202,8 +202,6 @@ func WithdrawHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("ok"))
 	}
-
-	return
 }
 
 // WithdrawalsHandler — получение информации о выводе средств с накопительного счёта пользователем.
@@ -221,7 +219,7 @@ func WithdrawalsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	withdrawals, err := db.Repositories().Withdraw.FindWithdrawalsByUser(user.Id)
+	withdrawals, err := db.Repositories().Withdraw.FindWithdrawalsByUser(user.ID)
 
 	if err != nil {
 		InternalErrorResponse(w, r, err)
@@ -284,22 +282,22 @@ func AddOrderHandler(w http.ResponseWriter, r *http.Request) {
 
 	order := db.Order{
 		Persist: false,
-		OrderId: orderId,
-		Status:  db.ORDER_STATUS_NEW,
-		UserId:  user.Id,
+		OrderID: orderId,
+		Status:  db.OrderStatusNew,
+		UserId:  user.ID,
 		Accrual: 0,
 	}
 
 	err := db.Repositories().Orders.Save(&order)
 
-	if errors.Is(err, gophermart.ErrOrderIdConflict) {
+	if errors.Is(err, gophermart.ErrOrderIDConflict) {
 		// дополнительно нужно проверить кем был ранее загружен заказ
 		o, err := db.Repositories().Orders.Find(orderId)
 		if err != nil {
 			InternalErrorResponse(w, r, err)
 		}
 
-		if o.UserId != user.Id {
+		if o.UserId != user.ID {
 			http.Error(w, "номер заказа уже был загружен другим пользователем", http.StatusConflict)
 		} else {
 			w.WriteHeader(http.StatusOK)
@@ -336,7 +334,7 @@ func GetOrdersHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	orders, err := db.Repositories().Orders.FindByUser(user.Id)
+	orders, err := db.Repositories().Orders.FindByUser(user.ID)
 
 	if err != nil {
 		InternalErrorResponse(w, r, err)

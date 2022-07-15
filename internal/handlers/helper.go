@@ -3,11 +3,13 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/nastradamus39/gophermart/gophermart"
-	"github.com/nastradamus39/gophermart/internal/db"
+	"io"
 	"log"
 	"net/http"
 	"time"
+
+	"github.com/nastradamus39/gophermart/gophermart"
+	"github.com/nastradamus39/gophermart/internal/db"
 )
 
 // InternalErrorResponse - возвращает пользователю 500 ошибку
@@ -40,13 +42,20 @@ func AuthenticateUser(user *db.User, r *http.Request, w http.ResponseWriter) err
 
 // Accrual запрашивает число назначенных балов за заказ. Вносит их на баланс пользователя
 func Accrual(order *db.Order, user *db.User) {
-	url := fmt.Sprintf("%s/api/orders/%s", gophermart.Cfg.AccrualAddress, order.OrderId)
+	url := fmt.Sprintf("%s/api/orders/%s", gophermart.Cfg.AccrualAddress, order.OrderID)
 
 	resp, err := http.Get(url)
 	if err != nil {
 		log.Printf(err.Error())
 		return
 	}
+
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
+
+		}
+	}(resp.Body)
 
 	status := resp.StatusCode
 
