@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"time"
@@ -39,8 +40,7 @@ func AuthenticateUser(user *db.User, r *http.Request, w http.ResponseWriter) err
 
 // Accrual запрашивает число назначенных балов за заказ. Вносит их на баланс пользователя
 func Accrual(order *db.Order, user *db.User) {
-	url := "%s/api/orders/%s"
-	fmt.Printf(url, gophermart.Cfg.AccrualAddress, order.OrderID)
+	url := fmt.Sprintf("%s/api/orders/%s", gophermart.Cfg.AccrualAddress, order.OrderID)
 
 	resp, e := http.Get(url)
 
@@ -49,7 +49,12 @@ func Accrual(order *db.Order, user *db.User) {
 		return
 	}
 
-	defer resp.Body.Close()
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
+			log.Print(err)
+		}
+	}(resp.Body)
 
 	status := resp.StatusCode
 
