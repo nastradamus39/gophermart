@@ -47,12 +47,12 @@ func Accrual(order *db.Order, user *db.User) {
 	defer func(Body io.ReadCloser) {
 		err := Body.Close()
 		if err != nil {
-
+			fmt.Print(err.Error())
 		}
 	}(resp.Body)
 
 	if err != nil {
-		log.Printf(err.Error())
+		log.Print(err.Error())
 		return
 	}
 
@@ -73,7 +73,7 @@ func Accrual(order *db.Order, user *db.User) {
 
 		// Обрабатываем входящий json
 		if err := json.NewDecoder(resp.Body).Decode(&incomingData); err != nil {
-			log.Printf(err.Error())
+			log.Print(err.Error())
 			return
 		}
 
@@ -82,21 +82,21 @@ func Accrual(order *db.Order, user *db.User) {
 		order.Accrual = incomingData.Accrual
 		err = db.Repositories().Orders.Save(order)
 		if err != nil {
-			log.Printf(err.Error())
+			log.Print(err.Error())
 		}
 
 		// начисляем пользователю балы
 		user.Balance = user.Balance + incomingData.Accrual
 		err = db.Repositories().Users.Save(user)
 		if err != nil {
-			log.Printf(err.Error())
+			log.Print(err.Error())
 		}
 	}
 	if status == http.StatusTooManyRequests {
-		log.Printf("Accrual system response - StatusTooManyRequests")
+		log.Print("Accrual system response - StatusTooManyRequests")
 		time.Sleep(time.Second)
 	}
 	if status == http.StatusInternalServerError {
-		log.Printf("Accrual system response - StatusInternalServerError")
+		log.Print("Accrual system response - StatusInternalServerError")
 	}
 }
