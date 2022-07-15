@@ -3,7 +3,6 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
 	"time"
@@ -49,12 +48,7 @@ func Accrual(order *db.Order, user *db.User) {
 		return
 	}
 
-	defer func(Body io.ReadCloser) {
-		err := Body.Close()
-		if err != nil {
-			log.Print(err)
-		}
-	}(resp.Body)
+	defer resp.Body.Close()
 
 	status := resp.StatusCode
 
