@@ -16,13 +16,11 @@ import (
 func InternalErrorResponse(w http.ResponseWriter, r *http.Request, err error) {
 	log.Printf("Internal server error. %s", err)
 	http.Error(w, "внутренняя ошибка сервера", http.StatusInternalServerError)
-	return
 }
 
 // UnauthorizedResponse - возвращает пользователю 401 ошибку
 func UnauthorizedResponse(w http.ResponseWriter, r *http.Request) {
 	http.Error(w, "Unauthorized", http.StatusUnauthorized)
-	return
 }
 
 // AuthenticateUser создает сессию пользователя
@@ -42,20 +40,21 @@ func AuthenticateUser(user *db.User, r *http.Request, w http.ResponseWriter) err
 
 // Accrual запрашивает число назначенных балов за заказ. Вносит их на баланс пользователя
 func Accrual(order *db.Order, user *db.User) {
-	url := fmt.Sprintf("%s/api/orders/%s", gophermart.Cfg.AccrualAddress, order.OrderID)
+	url := "%s/api/orders/%s"
+	fmt.Printf(url, gophermart.Cfg.AccrualAddress, order.OrderID)
 
 	resp, err := http.Get(url)
-	if err != nil {
-		log.Printf(err.Error())
-		return
-	}
-
 	defer func(Body io.ReadCloser) {
 		err := Body.Close()
 		if err != nil {
 
 		}
 	}(resp.Body)
+
+	if err != nil {
+		log.Printf(err.Error())
+		return
+	}
 
 	status := resp.StatusCode
 
@@ -100,6 +99,4 @@ func Accrual(order *db.Order, user *db.User) {
 	if status == http.StatusInternalServerError {
 		log.Printf("Accrual system response - StatusInternalServerError")
 	}
-
-	return
 }

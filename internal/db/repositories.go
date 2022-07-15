@@ -44,7 +44,7 @@ func (r *UsersRepository) Save(user interface{}) error {
 		res, err := r.db.NamedQuery(`INSERT INTO users(login, password) 
 			VALUES (:login, :password) on conflict (login) DO NOTHING RETURNING login`, &u)
 
-		if err != nil {
+		if err != nil && res.Err() != nil {
 			return err
 		}
 
@@ -52,7 +52,7 @@ func (r *UsersRepository) Save(user interface{}) error {
 			return fmt.Errorf("%w", gophermart.ErrUserLoginConflict)
 		}
 	} else {
-		_, err := r.db.NamedQuery(`UPDATE users SET "balance" = :balance
+		_, err := r.db.NamedExec(`UPDATE users SET "balance" = :balance
 			WHERE "login" = :login`, &u)
 
 		if err != nil {
@@ -88,7 +88,7 @@ func (r *OrderRepository) Save(order interface{}) error {
 			VALUES (:orderId, :userId, :status, :accrual) on conflict ("orderId") DO NOTHING 
 			RETURNING "orderId", "userId", "status", "accrual"`, &o)
 
-		if err != nil {
+		if err != nil && res.Err() != nil {
 			return err
 		}
 
@@ -98,7 +98,7 @@ func (r *OrderRepository) Save(order interface{}) error {
 			return fmt.Errorf("%w", gophermart.ErrOrderIDConflict)
 		}
 	} else {
-		_, err := r.db.NamedQuery(`UPDATE orders SET "status" = :status, "accrual" = :accrual 
+		_, err := r.db.NamedExec(`UPDATE orders SET "status" = :status, "accrual" = :accrual 
 			WHERE "orderId" = :orderId`, o)
 
 		if err != nil {
@@ -158,7 +158,7 @@ func (r *WithdrawRepository) Save(withdraw interface{}) error {
 	}
 
 	if !w.Persist {
-		_, err := r.db.NamedQuery(`INSERT INTO withdrawals("orderId", "userId", "withdraw") 
+		_, err := r.db.NamedExec(`INSERT INTO withdrawals("orderId", "userId", "withdraw") 
 			VALUES (:orderId, :userId, :withdraw)`, &w)
 
 		if err != nil {

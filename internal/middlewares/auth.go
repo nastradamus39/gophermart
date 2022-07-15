@@ -13,6 +13,10 @@ func UserAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// сессия текущего пользователя
 		session, err := gophermart.SessionStore.Get(r, "go-session")
+		if err != nil {
+			handlers.UnauthorizedResponse(w, r)
+			return
+		}
 
 		userLogin, ok := session.Values["userId"].(string)
 

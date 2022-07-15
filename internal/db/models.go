@@ -26,7 +26,7 @@ type Order struct {
 	Persist    bool      `db:"-" json:"-"`
 	OrderID    string    `db:"orderId" json:"number"`
 	Status     string    `db:"status" json:"status"`
-	UserId     int       `db:"userId" json:"-"`
+	UserID     int       `db:"userId" json:"-"`
 	Accrual    float32   `db:"accrual" json:"accrual,omitempty"`
 	UploadedAt time.Time `db:"uploadedAt" json:"uploaded_at"`
 }
