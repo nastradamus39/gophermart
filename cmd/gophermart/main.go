@@ -27,7 +27,7 @@ func main() {
 	}
 	defer flog.Close()
 
-	//log.SetOutput(flog)
+	log.SetOutput(flog)
 
 	// Переменные окружения в конфиг
 	err = env.Parse(&gophermart.Cfg)
@@ -83,7 +83,7 @@ func privateRouter() http.Handler {
 	r.Get("/orders", handlers.GetOrdersHandler)
 	r.Get("/balance", handlers.BalanceHandler)
 	r.Post("/balance/withdraw", handlers.WithdrawHandler)
-	r.Get("/balance/withdrawals", handlers.WithdrawalsHandler)
+	r.Get("/withdrawals", handlers.WithdrawalsHandler)
 
 	return r
 }

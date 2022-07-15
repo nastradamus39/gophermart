@@ -28,7 +28,7 @@ create unique index if not exists users_login_uindex
 
 create table if not exists orders
 (
-    "orderId"  int not null,
+    "orderId"  varchar(64) not null,
     "status"   varchar(10) not null,
     "userId"   int not null,
     accural    int default 0,
@@ -45,8 +45,9 @@ create unique index if not exists orders_orderid_uindex
 `
 
 type repositories struct {
-	Users  *UsersRepository
-	Orders *OrderRepository
+	Users    *UsersRepository
+	Orders   *OrderRepository
+	Withdraw *WithdrawRepository
 }
 
 var repos *repositories
@@ -70,6 +71,10 @@ func InitDB() (err error) {
 		}},
 		Orders: &OrderRepository{repo{
 			table: "orders",
+			db:    gophermart.DB,
+		}},
+		Withdraw: &WithdrawRepository{repo{
+			table: "withdrawals",
 			db:    gophermart.DB,
 		}},
 	}

@@ -14,27 +14,26 @@ const (
 )
 
 type User struct {
-	Persist   bool   `db:"-" json:"-"`
-	Id        int    `db:"id"`
-	Login     string `db:"login" json:"login"`
-	Password  string `db:"password" json:"password"`
-	Accrual   int    `db:"accrual"`
-	Withdrawn int    `db:"withdrawn"`
-	Balance   int    `db:"balance"`
+	Persist  bool    `db:"-" json:"-"`
+	Id       int     `db:"id"`
+	Login    string  `db:"login" json:"login"`
+	Password string  `db:"password" json:"password"`
+	Balance  float32 `db:"balance"`
 }
 
 type Order struct {
-	Persist    bool   `db:"-" json:"-"`
-	OrderId    int    `db:"orderId" json:"number"`
-	Status     string `db:"status" json:"status"`
-	UserId     int    `db:"userId" json:"-"`
-	Accrual    int    `db:"accrual" json:"accrual,omitempty"`
-	Withdrawn  int    `db:"withdraw" json:"-"`
-	UploadedAt string `db:"uploadedAt" json:"uploaded_at"`
+	Persist    bool      `db:"-" json:"-"`
+	OrderId    string    `db:"orderId" json:"number"`
+	Status     string    `db:"status" json:"status"`
+	UserId     int       `db:"userId" json:"-"`
+	Accrual    float32   `db:"accrual" json:"accrual,omitempty"`
+	UploadedAt time.Time `db:"uploadedAt" json:"uploaded_at"`
 }
 
-type Withdrawals struct {
-	Order       int       `db:"orderId" json:"order"`
-	Sum         int       `db:"withdraw" json:"sum"`
-	ProcessedAt time.Time `db:"uploadedAt" json:"processed_at"`
+type Withdraw struct {
+	Persist     bool      `db:"-" json:"-"`
+	Order       string    `db:"orderId" json:"order"`
+	UserId      int       `db:"userId" json:"-"`
+	Sum         float32   `db:"withdraw" json:"sum"`
+	ProcessedAt time.Time `db:"date" json:"processed_at"`
 }

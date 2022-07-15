@@ -29,6 +29,10 @@ type OrderRepository struct {
 	repo
 }
 
+type WithdrawRepository struct {
+	repo
+}
+
 // Save сохраняет пользователя в базе
 func (r *UsersRepository) Save(user interface{}) error {
 	u, ok := user.(*User)
@@ -46,6 +50,13 @@ func (r *UsersRepository) Save(user interface{}) error {
 
 		if !res.Next() {
 			return fmt.Errorf("%w", gophermart.ErrUserLoginConflict)
+		}
+	} else {
+		_, err := r.db.NamedQuery(`UPDATE users SET "balance" = :balance
+			WHERE "login" = :login`, &u)
+
+		if err != nil {
+			return err
 		}
 	}
 
@@ -73,25 +84,36 @@ func (r *OrderRepository) Save(order interface{}) error {
 	}
 
 	if !o.Persist {
-		res, err := r.db.NamedQuery(`INSERT INTO orders("orderId", "userId", "status", "accrual", "withdraw") 
-			VALUES (:orderId, :userId, :status, :accrual, :withdraw) on conflict ("orderId") DO NOTHING 
-			RETURNING "orderId", "userId", "status", "accrual", "withdraw"`, &o)
+		res, err := r.db.NamedQuery(`INSERT INTO orders("orderId", "userId", "status", "accrual") 
+			VALUES (:orderId, :userId, :status, :accrual) on conflict ("orderId") DO NOTHING 
+			RETURNING "orderId", "userId", "status", "accrual"`, &o)
 
 		if err != nil {
 			return err
 		}
 
+		o.Persist = true
+
 		if !res.Next() {
 			return fmt.Errorf("%w", gophermart.ErrOrderIdConflict)
 		}
+	} else {
+		_, err := r.db.NamedQuery(`UPDATE orders SET "status" = :status, "accrual" = :accrual 
+			WHERE "orderId" = :orderId`, o)
+
+		if err != nil {
+			return err
+		}
+		o.Persist = true
 	}
 
 	return nil
 }
 
 // Find поиск заказа по orderId
-func (r *OrderRepository) Find(orderId int) (order *Order, err error) {
-	err = r.db.Get(&order, `SELECT * FROM orders WHERE "orderId" = $1`, orderId)
+func (r *OrderRepository) Find(orderId string) (order *Order, err error) {
+	order = &Order{}
+	err = r.db.Get(order, `SELECT * FROM orders WHERE "orderId" = $1`, orderId)
 	order.Persist = true
 	return
 }
@@ -103,11 +125,48 @@ func (r *OrderRepository) FindByUser(userId int) (orders []*Order, err error) {
 }
 
 // FindWithdrawalsByUser списания балов пользователя
-func (r *OrderRepository) FindWithdrawalsByUser(userId int) (orders []*Withdrawals, err error) {
+func (r *WithdrawRepository) FindWithdrawalsByUser(userId int) (withdrawals []*Withdraw, err error) {
 	err = r.db.Select(
-		&orders,
-		`SELECT "orderId", withdraw, "uploadedAt" FROM orders WHERE "userId" = $1 ORDER BY "uploadedAt"`,
+		&withdrawals,
+		`SELECT "orderId", withdraw, "date" FROM withdrawals WHERE "userId" = $1 ORDER BY "date"`,
 		userId,
 	)
 	return
+}
+
+// WithdrawalsSumByUser сумма всех списаний пользователя
+func (r *WithdrawRepository) WithdrawalsSumByUser(userId int) (sum float32, err error) {
+	sum = 0
+	err = r.db.Get(
+		&sum,
+		`SELECT CASE
+						   WHEN SUM(withdraw) IS NULL
+							   THEN 0
+						   ELSE SUM(withdraw)
+						   END
+				FROM withdrawals
+				WHERE "userId" = $1`,
+		userId,
+	)
+	return
+}
+
+func (r *WithdrawRepository) Save(withdraw interface{}) error {
+	w, ok := withdraw.(*Withdraw)
+	if !ok {
+		return errors.New("unsupported type")
+	}
+
+	if !w.Persist {
+		_, err := r.db.NamedQuery(`INSERT INTO withdrawals("orderId", "userId", "withdraw") 
+			VALUES (:orderId, :userId, :withdraw)`, &w)
+
+		if err != nil {
+			return err
+		}
+
+		w.Persist = true
+	}
+
+	return nil
 }
