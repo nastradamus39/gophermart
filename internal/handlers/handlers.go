@@ -104,7 +104,7 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 // 401 — пользователь не авторизован.
 // 500 — внутренняя ошибка сервера.
 func BalanceHandler(w http.ResponseWriter, r *http.Request) {
-	u := r.Context().Value("user")
+	u := r.Context().Value(gophermart.ContextUserKey)
 	user, ok := u.(*db.User)
 
 	if !ok {
@@ -148,7 +148,7 @@ func BalanceHandler(w http.ResponseWriter, r *http.Request) {
 // 422 — неверный номер заказа;
 // 500 — внутренняя ошибка сервера.
 func WithdrawHandler(w http.ResponseWriter, r *http.Request) {
-	u := r.Context().Value("user")
+	u := r.Context().Value(gophermart.ContextUserKey)
 	user, ok := u.(*db.User)
 
 	if !ok {
@@ -211,7 +211,7 @@ func WithdrawHandler(w http.ResponseWriter, r *http.Request) {
 // 401 — пользователь не авторизован.
 // 500 — внутренняя ошибка сервера.
 func WithdrawalsHandler(w http.ResponseWriter, r *http.Request) {
-	u := r.Context().Value("user")
+	u := r.Context().Value(gophermart.ContextUserKey)
 	user, ok := u.(*db.User)
 
 	if !ok {
@@ -273,7 +273,7 @@ func AddOrderHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	u := r.Context().Value("user")
+	u := r.Context().Value(gophermart.ContextUserKey)
 	user, ok := u.(*db.User)
 
 	if !ok {
@@ -325,7 +325,7 @@ func AddOrderHandler(w http.ResponseWriter, r *http.Request) {
 // 401 — пользователь не авторизован.
 // 500 — внутренняя ошибка сервера.
 func GetOrdersHandler(w http.ResponseWriter, r *http.Request) {
-	u := r.Context().Value("user")
+	u := r.Context().Value(gophermart.ContextUserKey)
 	user, ok := u.(*db.User)
 
 	if !ok {

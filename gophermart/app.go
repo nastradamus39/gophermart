@@ -11,6 +11,13 @@ import (
 // адрес подключения к базе данных: переменная окружения ОС DATABASE_URI или флаг -d;
 // адрес системы расчёта начислений: переменная окружения ОС ACCRUAL_SYSTEM_ADDRESS или флаг -r.
 
+const (
+	SessionName               = "gopherMarketSid"
+	ContextUserKey ContextKey = iota
+)
+
+type ContextKey int8
+
 // Cfg конфиг приложения
 var Cfg Config
 

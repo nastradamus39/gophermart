@@ -25,7 +25,7 @@ func UnauthorizedResponse(w http.ResponseWriter, r *http.Request) {
 // AuthenticateUser создает сессию пользователя
 func AuthenticateUser(user *db.User, r *http.Request, w http.ResponseWriter) error {
 	// авторизуем пользователя
-	session, err := gophermart.SessionStore.Get(r, "go-session")
+	session, err := gophermart.SessionStore.Get(r, gophermart.SessionName)
 	if err != nil {
 		return err
 	}
@@ -46,6 +46,7 @@ func Accrual(order *db.Order, user *db.User) {
 
 	if e != nil {
 		log.Print(e.Error())
+		return
 	}
 
 	defer resp.Body.Close()
