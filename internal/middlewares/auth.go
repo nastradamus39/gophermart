@@ -12,7 +12,11 @@ import (
 func UserAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// сессия текущего пользователя
-		session, err := gophermart.SessionStore.Get(r, "go-session")
+		session, err := gophermart.SessionStore.Get(r, gophermart.SessionName)
+		if err != nil {
+			handlers.UnauthorizedResponse(w, r)
+			return
+		}
 
 		userLogin, ok := session.Values["userId"].(string)
 
@@ -30,6 +34,6 @@ func UserAuth(next http.Handler) http.Handler {
 		}
 
 		// в контекст передаем ссылку на пользователя
-		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), "user", user)))
+		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), gophermart.ContextUserKey, user)))
 	})
 }

@@ -104,7 +104,7 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 // 401 — пользователь не авторизован.
 // 500 — внутренняя ошибка сервера.
 func BalanceHandler(w http.ResponseWriter, r *http.Request) {
-	u := r.Context().Value("user")
+	u := r.Context().Value(gophermart.ContextUserKey)
 	user, ok := u.(*db.User)
 
 	if !ok {
@@ -148,7 +148,7 @@ func BalanceHandler(w http.ResponseWriter, r *http.Request) {
 // 422 — неверный номер заказа;
 // 500 — внутренняя ошибка сервера.
 func WithdrawHandler(w http.ResponseWriter, r *http.Request) {
-	u := r.Context().Value("user")
+	u := r.Context().Value(gophermart.ContextUserKey)
 	user, ok := u.(*db.User)
 
 	if !ok {
@@ -211,7 +211,7 @@ func WithdrawHandler(w http.ResponseWriter, r *http.Request) {
 // 401 — пользователь не авторизован.
 // 500 — внутренняя ошибка сервера.
 func WithdrawalsHandler(w http.ResponseWriter, r *http.Request) {
-	u := r.Context().Value("user")
+	u := r.Context().Value(gophermart.ContextUserKey)
 	user, ok := u.(*db.User)
 
 	if !ok {
@@ -265,15 +265,15 @@ func AddOrderHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}(r.Body)
 
-	orderId := string(id)
+	orderID := string(id)
 
-	if isValid := luhn.Validate(orderId); !isValid {
+	if isValid := luhn.Validate(orderID); !isValid {
 		w.WriteHeader(http.StatusUnprocessableEntity)
 		w.Write([]byte("неверный формат номера заказа"))
 		return
 	}
 
-	u := r.Context().Value("user")
+	u := r.Context().Value(gophermart.ContextUserKey)
 	user, ok := u.(*db.User)
 
 	if !ok {
@@ -282,9 +282,9 @@ func AddOrderHandler(w http.ResponseWriter, r *http.Request) {
 
 	order := db.Order{
 		Persist: false,
-		OrderID: orderId,
+		OrderID: orderID,
 		Status:  db.OrderStatusNew,
-		UserId:  user.ID,
+		UserID:  user.ID,
 		Accrual: 0,
 	}
 
@@ -292,12 +292,12 @@ func AddOrderHandler(w http.ResponseWriter, r *http.Request) {
 
 	if errors.Is(err, gophermart.ErrOrderIDConflict) {
 		// дополнительно нужно проверить кем был ранее загружен заказ
-		o, err := db.Repositories().Orders.Find(orderId)
+		o, err := db.Repositories().Orders.Find(orderID)
 		if err != nil {
 			InternalErrorResponse(w, r, err)
 		}
 
-		if o.UserId != user.ID {
+		if o.UserID != user.ID {
 			http.Error(w, "номер заказа уже был загружен другим пользователем", http.StatusConflict)
 		} else {
 			w.WriteHeader(http.StatusOK)
@@ -315,7 +315,6 @@ func AddOrderHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusAccepted)
 	w.Write([]byte("новый номер заказа принят в обработку"))
-	return
 }
 
 // GetOrdersHandler — получение списка загруженных пользователем номеров заказов, статусов их обработки
@@ -326,7 +325,7 @@ func AddOrderHandler(w http.ResponseWriter, r *http.Request) {
 // 401 — пользователь не авторизован.
 // 500 — внутренняя ошибка сервера.
 func GetOrdersHandler(w http.ResponseWriter, r *http.Request) {
-	u := r.Context().Value("user")
+	u := r.Context().Value(gophermart.ContextUserKey)
 	user, ok := u.(*db.User)
 
 	if !ok {
@@ -358,5 +357,4 @@ func GetOrdersHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Write(response)
-	return
 }
