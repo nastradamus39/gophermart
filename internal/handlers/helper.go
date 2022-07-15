@@ -47,13 +47,12 @@ func Accrual(order *db.Order, user *db.User) {
 	defer func(Body io.ReadCloser) {
 		err := Body.Close()
 		if err != nil {
-			log.Print(err)
+			log.Print(err.Error())
 		}
 	}(resp.Body)
 
 	if e != nil {
 		log.Print(e.Error())
-		return
 	}
 
 	status := resp.StatusCode
