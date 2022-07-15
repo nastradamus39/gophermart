@@ -33,6 +33,21 @@ type WithdrawRepository struct {
 	repo
 }
 
+func (r *repo) BeginTx() error {
+	_, err := r.db.Exec("START TRANSACTION;")
+	return err
+}
+
+func (r *repo) CommitTx() error {
+	_, err := r.db.Exec("COMMIT;")
+	return err
+}
+
+func (r *repo) RollbackTx() error {
+	_, err := r.db.Exec("ROLLBACK;")
+	return err
+}
+
 // Save сохраняет пользователя в базе
 func (r *UsersRepository) Save(user interface{}) error {
 	u, ok := user.(*User)

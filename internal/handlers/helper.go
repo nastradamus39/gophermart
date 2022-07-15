@@ -71,17 +71,37 @@ func Accrual(order *db.Order, user *db.User) {
 			return
 		}
 
+		err := db.Repositories().Orders.BeginTx()
+		if err != nil {
+			log.Print(err.Error())
+			return
+		}
+
 		// меняем статус заказа
 		order.Status = incomingData.Status
 		order.Accrual = incomingData.Accrual
-		err := db.Repositories().Orders.Save(order)
+		err = db.Repositories().Orders.Save(order)
 		if err != nil {
 			log.Print(err.Error())
+			e = db.Repositories().Orders.RollbackTx()
+			if e != nil {
+				log.Print(err.Error())
+			}
+			return
 		}
 
 		// начисляем пользователю балы
 		user.Balance = user.Balance + incomingData.Accrual
 		err = db.Repositories().Users.Save(user)
+		if err != nil {
+			log.Print(err.Error())
+			e = db.Repositories().Orders.RollbackTx()
+			if e != nil {
+				log.Print(err.Error())
+			}
+			return
+		}
+		err = db.Repositories().Orders.CommitTx()
 		if err != nil {
 			log.Print(err.Error())
 		}
